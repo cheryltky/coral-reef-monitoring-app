@@ -1,0 +1,7 @@
+# Neon Database Configuration
+# Copy this file to .env and fill in your actual Neon database credentials
+NEON_HOST=your-neon-host.neon.tech
+NEON_DATABASE=your-database-name
+NEON_USER=your-username
+NEON_PASSWORD=your-password
+NEON_PORT=5432 
