@@ -1,98 +1,112 @@
-# 🌊 Coral Reef Health Monitor
+# Can reef bleaching risk be monitored with a free cloud stack?
 
-A real-time coral reef monitoring system using free cloud tools: **Neon PostgreSQL** + **Streamlit**.
+A coral reef monitoring dashboard built on Neon PostgreSQL and Streamlit,
+tracking sea surface temperature and bleaching risk for five reef sites.
+It runs on simulated data and is a working prototype of the pipeline, not a
+source of real reef findings.
 
-## 🚀 Quick Start
+## Project background
 
-### 1. Set up your environment
+Coral bleaching is driven by sustained high sea temperatures, and reef
+managers need a quick view of which sites are heating up. This project is the
+analyst's prototype for that view: a small pipeline that stores daily sea
+surface temperature (SST) and Degree Heating Weeks (DHW) readings in a cloud
+database, and a dashboard that turns them into a bleaching risk label per day.
 
-First, rename the template file and add your Neon database credentials:
+The build covers three areas:
 
-```bash
-cp env_template.txt .env
-```
+- **Pipeline:** generate daily readings for five reefs and load them into Neon PostgreSQL without duplicates
+- **Risk classification:** turn DHW into four bleaching risk levels, from No Risk to High Risk
+- **Dashboard:** filter by reef and see headline metrics, temperature trends, a risk breakdown and a map
 
-Then edit `.env` with your actual Neon database credentials:
+Links to the technical work:
 
-```env
-NEON_HOST=your-neon-host.neon.tech
-NEON_DATABASE=your-database-name
-NEON_USER=your-username
-NEON_PASSWORD=your-password
-NEON_PORT=5432
-```
+- Data pipeline: [coral_reef_pipeline.py](coral_reef_pipeline.py)
+- Dashboard: [dashboard.py](dashboard.py)
+- Connection check: [test_connection.py](test_connection.py)
+- Environment template (placeholders only): [env_template.txt](env_template.txt)
 
-### 2. Activate virtual environment
+## Data structure and initial checks
 
-```bash
-source coral-reef-venv/bin/activate
-```
+One table, `reef_data`, holds one row per reef per day, with SST, DHW, the
+risk label and the reef's coordinates. The pipeline generates **30 days of
+readings for 5 reef sites** across Australia, the USA, Fiji and Mexico, and
+every row is tagged `Simulated`. A unique key on reef and date means re-running
+the load updates rows rather than duplicating them, and
+[test_connection.py](test_connection.py) confirms the database is reachable
+before the pipeline runs. The full schema is in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
-### 3. Test database connection
+## Executive summary
 
-```bash
-python test_connection.py
-```
+The prototype takes five reef sites from raw readings to a bleaching risk view
+in three scripts: a connection test, a pipeline and a Streamlit dashboard. Any
+SST above a **27.0 degree Celsius threshold** produces a DHW value, which is
+mapped to No, Low, Moderate or High Risk at DHW cut-offs of 1, 4 and 8. All of
+it runs on free tiers, with credentials held in environment variables rather
+than in the code.
 
-### 4. Run the data pipeline
+The dashboard shows four headline metrics (average SST, maximum DHW, High Risk
+days and reefs monitored), a temperature trend, a risk distribution and a
+reef map. No dashboard screenshot is included yet.
 
-```bash
-python coral_reef_pipeline.py
-```
+## Insights deep dive
 
-### 5. Launch the dashboard
+### Pipeline
 
-```bash
-streamlit run dashboard.py
-```
+- **Five reef sites, 30 days each, loaded in one run.** The Great Barrier Reef
+  is split into a northern and a central site, alongside Hawaii, Fiji and the
+  Mesoamerican Reef.
+- **Re-runs are safe for the data but not for history.** Inserts update on a
+  reef and date match, yet the pipeline drops and recreates the table each run,
+  so every run replaces what was stored.
 
-## 📊 Features
+### Risk classification
 
-- **Real-time monitoring** of coral reef health metrics
-- **Temperature tracking** with Sea Surface Temperature (SST) data
-- **Bleaching risk assessment** using Degree Heating Weeks (DHW)
-- **Interactive maps** showing global reef locations
-- **Filtering capabilities** by reef and time period
-- **Beautiful visualizations** with Plotly charts
+- **Risk is set by DHW at cut-offs of 1, 4 and 8.** A value of 8 or more is High
+  Risk, 4 or more is Moderate, 1 or more is Low and anything below is No Risk.
+- **DHW is zero unless SST passes 27.0 degrees Celsius.** Above that, it is the
+  excess over 27.0 multiplied by 7, calculated per day rather than accumulated
+  over a rolling window.
 
-## 🛠️ Tech Stack
+### Dashboard
 
-- **Database**: Neon PostgreSQL (free tier)
-- **Dashboard**: Streamlit
-- **Visualization**: Plotly
-- **Data Processing**: Pandas, NumPy
-- **Environment**: Python 3.11
+- **One reef selector drives every metric, chart and the map.** The sidebar
+  offers all reefs together or a single site.
+- **The page fails visibly.** If the database connection fails, the app shows
+  the error and stops instead of rendering empty charts.
 
-## 📈 Data Sources
+## Recommendations
 
-The system currently uses simulated data for demonstration, including:
-- Great Barrier Reef (Australia)
-- Hawaiian Islands (USA)
-- Fiji Reefs (Fiji)
-- Mesoamerican Reef (Mexico)
+For a reef monitoring team considering this approach:
 
-## 🔧 Project Structure
+- The numbers are simulated, so the dashboard says nothing about real reefs.
+  **Replace the generator with a real SST and DHW feed before drawing any
+  conclusion about a site.**
+- DHW is calculated from a single day's temperature. **Accumulate heat stress
+  over a rolling window before relying on the risk labels.**
+- The pipeline drops the table on every run. **Switch to append-only loads
+  once real data is stored, so history is kept.**
+- The dashboard filters by reef only. **Add a date range filter if the
+  history grows beyond the current 30 days.**
 
-```
-coral-reef-data/
-├── coral_reef_pipeline.py    # Data pipeline
-├── dashboard.py              # Streamlit dashboard
-├── test_connection.py        # Database connection test
-├── requirements.txt          # Python dependencies
-├── env_template.txt          # Environment template
-└── coral-reef-venv/         # Virtual environment
-```
+## Assumptions and caveats
 
-## 🎯 Next Steps
+- **Simulated data.** SST combines a base temperature, a seasonal sine curve
+  and random noise; it is not measured. Results change on every run.
+- **Simplified bleaching risk.** The 27.0 degree threshold and the DHW
+  formula are demonstration values, not a validated bleaching model.
+- **Not a real-time system.** The dashboard queries the database on each
+  load, but nothing is streamed in from sensors or satellites.
+- **No tests beyond the connection check,** and no screenshot or live link yet.
 
-1. **Get Neon Database**: Sign up at [neon.tech](https://neon.tech) for free PostgreSQL
-2. **Update credentials**: Add your database details to `.env`
-3. **Run the pipeline**: Generate and store reef data
-4. **Launch dashboard**: View your coral reef monitoring system!
+## Technical detail
 
-## 🌟 Free Tools Used
+- How to run it: [docs/SETUP.md](docs/SETUP.md)
+- Data generation, risk rules and schema: [docs/METHODOLOGY.md](docs/METHODOLOGY.md)
 
-- **Neon**: Serverless PostgreSQL with generous free tier
-- **Streamlit**: Free hosting for data apps
-- **GitHub**: Version control and collaboration
-- **Python**: Open-source data science ecosystem 
+## Data and licensing
+
+All readings are generated by the pipeline; no third-party data is used. The
+database credentials are read from environment variables (`NEON_HOST`,
+`NEON_DATABASE`, `NEON_USER`, `NEON_PASSWORD`, `NEON_PORT`) loaded from a local
+`.env` file, which is never committed.
