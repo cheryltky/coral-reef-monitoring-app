@@ -1,5 +1,7 @@
 # Can reef bleaching risk be monitored with a free cloud stack?
 
+![Cover](assets/cover.png)
+
 A coral reef monitoring dashboard built on Neon PostgreSQL and Streamlit,
 tracking sea surface temperature and bleaching risk for five reef sites.
 It runs on simulated data and is a working prototype of the pipeline, not a
